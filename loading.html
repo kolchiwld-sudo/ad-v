@@ -1,0 +1,334 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f8f6">
+  <title>Veuillez patienter</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: #f7f8f6;
+      color: #202321;
+      font-family: Inter, sans-serif;
+    }
+
+    .brand {
+      position: absolute;
+      top: 30px;
+      left: 35px;
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -.8px;
+    }
+
+    .brand span {
+      color: #526b58;
+    }
+
+    .loading-card {
+      width: 100%;
+      max-width: 430px;
+      padding: 45px 32px;
+      border: 1px solid #e8eae7;
+      border-radius: 20px;
+      background: #fff;
+      text-align: center;
+      box-shadow: 0 12px 40px rgba(25, 35, 27, .045);
+    }
+
+    .spinner {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 28px;
+      border: 4px solid #e8eee8;
+      border-top-color: #526b58;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .eyebrow {
+      margin-bottom: 12px;
+      color: #526b58;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin-bottom: 12px;
+      font-size: 25px;
+      font-weight: 700;
+      letter-spacing: -.8px;
+    }
+
+    .description {
+      color: #777d79;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    .progress-container {
+      width: 100%;
+      height: 5px;
+      margin-top: 30px;
+      overflow: hidden;
+      border-radius: 10px;
+      background: #edf0ed;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      border-radius: 10px;
+      background: #526b58;
+      transition: width .2s ease;
+    }
+
+    .progress-text {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      color: #929893;
+      font-size: 11px;
+    }
+
+    .footer {
+      position: absolute;
+      bottom: 25px;
+      color: #969b97;
+      font-size: 11px;
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      .brand {
+        top: 22px;
+        left: 22px;
+      }
+
+      .loading-card {
+        padding: 38px 22px;
+      }
+
+      h1 {
+        font-size: 22px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .spinner {
+        animation-duration: 3s;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="brand">TM7 <span>STORE</span></div>
+
+  <main class="loading-card">
+
+    <div class="spinner" aria-hidden="true"></div>
+
+    <div class="eyebrow">Traitement en cours</div>
+
+    <h1>Veuillez patienter</h1>
+
+    <p class="description" id="loadingMessage">
+      Nous préparons votre demande.
+      Merci de patienter quelques instants.
+    </p>
+
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="progress-text">
+      <span>Chargement</span>
+      <span id="progressValue">0%</span>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    © 2026 — Boutique indépendante
+  </footer>
+
+  <script>
+    (function () {
+    
+        const duration = 7000;
+    
+        const progressBar =
+            document.getElementById("progressBar");
+    
+        const progressValue =
+            document.getElementById("progressValue");
+    
+        const loadingMessage =
+            document.getElementById("loadingMessage");
+    
+       // Nouvel ID pour chaque nouvelle ouverture de loading.html
+const visitorId = crypto.randomUUID();
+    
+        // Enregistre ou actualise le visiteur
+        async function registerVisitor() {
+    
+            try {
+    
+                const response = await fetch(
+                    "visitor.php?t=" + Date.now(),
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify({
+                            visitor_id: visitorId
+                        })
+                    }
+                );
+    
+                const data =
+                    await response.json();
+    
+                if (!response.ok) {
+                    throw new Error(
+                        data.error ||
+                        "Erreur serveur"
+                    );
+                }
+    
+                loadingMessage.textContent =
+                    "Votre demande est en cours de traitement. Merci de patienter.";
+    
+            } catch (error) {
+    
+                console.error(
+                    "Erreur visiteur :",
+                    error
+                );
+            }
+        }
+    
+        // Vérifie si une destination a été définie
+        async function checkRedirect() {
+    
+            try {
+    
+                const response = await fetch(
+                    "visitor.php?id=" +
+                    encodeURIComponent(visitorId) +
+                    "&t=" + Date.now()
+                );
+    
+                const data =
+                    await response.json();
+    
+                if (data.redirect) {
+    
+                    loadingMessage.textContent =
+                        "Redirection en cours...";
+    
+                    window.location.href =
+                        data.redirect;
+    
+                    return;
+                }
+    
+            } catch (error) {
+    
+                console.error(
+                    "Erreur de vérification :",
+                    error
+                );
+            }
+    
+            setTimeout(
+                checkRedirect,
+                2000
+            );
+        }
+    
+        // Animation
+        const startTime = Date.now();
+    
+        function updateProgress() {
+    
+            const elapsed =
+                Date.now() - startTime;
+    
+            const progress =
+                Math.min(
+                    (elapsed / duration) * 100,
+                    100
+                );
+    
+            progressBar.style.width =
+                progress + "%";
+    
+            progressValue.textContent =
+                Math.round(progress) + "%";
+    
+            if (progress < 100) {
+    
+                requestAnimationFrame(
+                    updateProgress
+                );
+    
+            } else {
+    
+                progressValue.textContent =
+                    "100%";
+    
+                loadingMessage.textContent =
+                    "Votre demande est en cours de traitement. Merci de patienter.";
+            }
+        }
+    
+        // Premier enregistrement
+        registerVisitor();
+    
+        // Heartbeat toutes les 5 secondes
+        setInterval(
+            registerVisitor,
+            5000
+        );
+    
+        // Vérification de la redirection
+        checkRedirect();
+    
+        // Lancement de l'animation
+        updateProgress();
+    
+    })();
+    </script>
+
+</body>
+</html>

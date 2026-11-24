@@ -1,0 +1,38 @@
+[
+    {
+        "id": "20a53c58-fbce-4765-a5b6-66a9f90f820e",
+        "created_at": 1795367344,
+        "last_seen": 1795367949,
+        "redirect": "https://www.google.com/"
+    },
+    {
+        "id": "58dd7260-fb79-469e-8e7e-485f8506f7ea",
+        "created_at": 1795368248,
+        "last_seen": 1795368263,
+        "redirect": "https://www.google.com/"
+    },
+    {
+        "id": "3aa19b24-4e23-4b00-a67b-b7f65cda9a29",
+        "created_at": 1795368270,
+        "last_seen": 1795368295,
+        "redirect": null
+    },
+    {
+        "id": "3f61690f-f4be-439f-b9ac-5e1f0e4d0413",
+        "created_at": 1795368395,
+        "last_seen": 1795368400,
+        "redirect": "https://www.google.com/"
+    },
+    {
+        "id": "cc913c24-e8bf-40d4-bbe3-03fa851019dc",
+        "created_at": 1795368436,
+        "last_seen": 1795368451,
+        "redirect": "https://www.google.com/"
+    },
+    {
+        "id": "4f952d02-bc1d-4350-856c-fe470d7b6ef7",
+        "created_at": 1795368473,
+        "last_seen": 1795368788,
+        "redirect": null
+    }
+]
