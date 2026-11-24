@@ -1,1 +1,208 @@
+<?php
 
+session_start();
+
+header('Content-Type: application/json; charset=utf-8');
+
+if (empty($_SESSION['admin_logged_in'])) {
+
+    http_response_code(403);
+
+    echo json_encode([
+        'error' => 'Unauthorized'
+    ]);
+
+    exit;
+}
+
+$file =
+    dirname(__DIR__) .
+    '/visitors.json';
+
+function readVisitors($file)
+{
+    if (!is_file($file)) {
+        return [];
+    }
+
+    $content =
+        file_get_contents($file);
+
+    $data =
+        json_decode(
+            $content,
+            true
+        );
+
+    return is_array($data)
+        ? $data
+        : [];
+}
+
+function saveVisitors(
+    $file,
+    $visitors
+) {
+    file_put_contents(
+        $file,
+
+        json_encode(
+            $visitors,
+            JSON_PRETTY_PRINT |
+            JSON_UNESCAPED_SLASHES
+        ),
+
+        LOCK_EX
+    );
+}
+
+
+/*
+ * Récupérer les visiteurs
+ */
+if (
+    $_SERVER['REQUEST_METHOD'] === 'GET'
+) {
+
+    $visitors =
+        readVisitors($file);
+
+    /*
+     * On considère qu'un visiteur
+     * est actif s'il a communiqué
+     * avec le serveur récemment.
+     */
+    $now = time();
+
+    $active = [];
+
+    foreach ($visitors as $visitor) {
+
+        if (
+            ($now - ($visitor['last_seen'] ?? 0))
+            <= 20
+        ) {
+
+            $active[] = $visitor;
+        }
+    }
+
+    echo json_encode([
+        'visitors' => $active
+    ]);
+
+    exit;
+}
+
+
+/*
+ * Rediriger un visiteur
+ */
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+) {
+
+    $input =
+        json_decode(
+            file_get_contents('php://input'),
+            true
+        );
+
+    $visitorId =
+        trim(
+            (string)(
+                $input['visitor_id'] ?? ''
+            )
+        );
+
+    $url =
+        trim(
+            (string)(
+                $input['url'] ?? ''
+            )
+        );
+
+    if (
+        $visitorId === '' ||
+        $url === ''
+    ) {
+
+        http_response_code(400);
+
+        echo json_encode([
+            'error' =>
+                'Missing visitor ID or URL'
+        ]);
+
+        exit;
+    }
+
+    if (
+        !filter_var(
+            $url,
+            FILTER_VALIDATE_URL
+        )
+    ) {
+
+        http_response_code(400);
+
+        echo json_encode([
+            'error' =>
+                'Invalid URL'
+        ]);
+
+        exit;
+    }
+
+    $visitors =
+        readVisitors($file);
+
+    $found = false;
+
+    foreach ($visitors as &$visitor) {
+
+        if (
+            $visitor['id'] === $visitorId
+        ) {
+
+            $visitor['redirect'] =
+                $url;
+
+            $found = true;
+
+            break;
+        }
+    }
+
+    unset($visitor);
+
+    if (!$found) {
+
+        http_response_code(404);
+
+        echo json_encode([
+            'error' =>
+                'Visitor not found'
+        ]);
+
+        exit;
+    }
+
+    saveVisitors(
+        $file,
+        $visitors
+    );
+
+    echo json_encode([
+        'success' => true
+    ]);
+
+    exit;
+}
+
+http_response_code(405);
+
+echo json_encode([
+    'error' =>
+        'Method not allowed'
+]);
